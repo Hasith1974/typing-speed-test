@@ -1,4 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback
+} from "react";
 import "./App.css";
 
 function App() {
@@ -7,6 +12,7 @@ function App() {
   /* ===== STATE ===== */
   const [text, setText] = useState("");
   const [input, setInput] = useState("");
+
   const [time, setTime] = useState(60);
   const [selectedTime, setSelectedTime] = useState(60);
 
@@ -20,14 +26,19 @@ function App() {
   const [cps, setCps] = useState(0);
   const [speed, setSpeed] = useState(0);
 
-  /* ===== LOAD TEXT ===== */
+  /* ===== LOAD PARAGRAPH ===== */
   const loadParagraph = async () => {
     try {
       const res = await fetch("https://dummyjson.com/quotes");
       const data = await res.json();
 
       const paragraph = Array.from({ length: 4 })
-        .map(() => data.quotes[Math.floor(Math.random() * data.quotes.length)].quote)
+        .map(
+          () =>
+            data.quotes[
+              Math.floor(Math.random() * data.quotes.length)
+            ].quote
+        )
         .join(" ");
 
       setText(paragraph);
@@ -35,7 +46,7 @@ function App() {
       setFinished(false);
       setError(false);
     } catch {
-      setText("Loading text...");
+      setText("Failed to load text...");
     }
   };
 
@@ -43,17 +54,42 @@ function App() {
     loadParagraph();
   }, []);
 
+  /* ===== END TEST (FIXED WITH useCallback) ===== */
+  const endTest = useCallback(() => {
+    setRunning(false);
+    setFinished(true);
+
+    if (!input.length) return;
+
+    const correctChars = input
+      .split("")
+      .filter((c, i) => c === text[i]).length;
+
+    const acc = Math.round(
+      (correctChars / input.length) * 100
+    );
+
+    const cpsValue = (input.length / selectedTime).toFixed(2);
+
+    setAccuracy(acc);
+    setCps(cpsValue);
+    setSpeed(Math.round(cpsValue * 60));
+  }, [input, text, selectedTime]);
+
   /* ===== TIMER ===== */
   useEffect(() => {
     if (!running || paused) return;
 
     if (time > 0) {
-      const timer = setTimeout(() => setTime(t => t - 1), 1000);
+      const timer = setTimeout(
+        () => setTime(t => t - 1),
+        1000
+      );
       return () => clearTimeout(timer);
     }
 
     endTest();
-  }, [time, running, paused]);
+  }, [time, running, paused, endTest]);
 
   /* ===== CONTROLS ===== */
   const startTest = () => {
@@ -62,10 +98,15 @@ function App() {
     setFinished(false);
     setTime(selectedTime);
     loadParagraph();
-    setTimeout(() => inputRef.current.focus(), 100);
+
+    setTimeout(() => {
+      inputRef.current.focus();
+    }, 100);
   };
 
-  const pauseTest = () => running && setPaused(p => !p);
+  const pauseTest = () => {
+    if (running) setPaused(p => !p);
+  };
 
   const resetTest = () => {
     setRunning(false);
@@ -75,33 +116,15 @@ function App() {
     loadParagraph();
   };
 
-  const endTest = () => {
-    setRunning(false);
-    setFinished(true);
-
-    if (!input.length) return;
-
-    const correct = input
-      .split("")
-      .filter((c, i) => c === text[i]).length;
-
-    const acc = Math.round((correct / input.length) * 100);
-    const cpsValue = (input.length / selectedTime).toFixed(2);
-
-    setAccuracy(acc);
-    setCps(cpsValue);
-    setSpeed(Math.round(cpsValue * 60));
-  };
-
   const handleType = e => {
     if (!running || paused || finished) return;
 
     const value = e.target.value;
     setInput(value);
 
-    const last = value.length - 1;
-    if (text[last]) {
-      setError(value[last] !== text[last]);
+    const lastIndex = value.length - 1;
+    if (text[lastIndex]) {
+      setError(value[lastIndex] !== text[lastIndex]);
     }
   };
 
@@ -123,19 +146,29 @@ function App() {
       );
     });
 
-  const progress = text ? (input.length / text.length) * 100 : 0;
+  const progress = text
+    ? (input.length / text.length) * 100
+    : 0;
 
+  /* ===== UI ===== */
   return (
     <div className={dark ? "app dark" : "app light"}>
-
       <h1>Typing Speed Test</h1>
 
       <div className={error ? "alert error" : "alert"}>
-        {finished ? "Test Completed" : paused ? "Paused" : error ? "Mistake!" : "Typing..."}
+        {finished
+          ? "Test Completed"
+          : paused
+          ? "Paused"
+          : error
+          ? "Typing mistake!"
+          : "Typing..."}
       </div>
 
       <div className="controls">
-        <select onChange={e => setSelectedTime(+e.target.value)}>
+        <select
+          onChange={e => setSelectedTime(+e.target.value)}
+        >
           <option value="30">30s</option>
           <option value="60">60s</option>
           <option value="120">120s</option>
@@ -144,7 +177,7 @@ function App() {
         <span>Time: {time}s</span>
 
         <button onClick={() => setDark(d => !d)}>
-          {dark ? "Light" : "Dark"}
+          {dark ? "Light Mode" : "Dark Mode"}
         </button>
       </div>
 
@@ -152,7 +185,10 @@ function App() {
         <div style={{ width: `${progress}%` }} />
       </div>
 
-      <div className="paragraph" onClick={() => inputRef.current.focus()}>
+      <div
+        className="paragraph"
+        onClick={() => inputRef.current.focus()}
+      >
         {renderText()}
       </div>
 
@@ -166,7 +202,9 @@ function App() {
 
       <div className="buttons">
         <button onClick={startTest}>Start</button>
-        <button onClick={pauseTest}>{paused ? "Resume" : "Pause"}</button>
+        <button onClick={pauseTest}>
+          {paused ? "Resume" : "Pause"}
+        </button>
         <button onClick={resetTest}>Reset</button>
       </div>
 

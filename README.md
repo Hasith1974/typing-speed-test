@@ -1,6 +1,6 @@
 # Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is [Typing Speed Tester](https://typing-speed-test-psi-khaki.vercel.app/).
 
 ## Available Scripts
 
